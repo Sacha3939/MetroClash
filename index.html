@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetroClash - City Building Strategy Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #app {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #game-container {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #00ff88;
+            min-width: 250px;
+            pointer-events: auto;
+        }
+        
+        .hud-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #00ff88;
+        }
+        
+        .resource {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 4px;
+        }
+        
+        .resource-label {
+            color: #00ff88;
+        }
+        
+        .resource-value {
+            font-weight: bold;
+            color: #00ff88;
+        }
+        
+        .right-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #ff0088;
+            min-width: 200px;
+            pointer-events: auto;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        .button:hover {
+            transform: scale(1.05);
+        }
+        
+        .button:active {
+            transform: scale(0.95);
+        }
+        
+        .loading-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        
+        .loading-text {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #00ff88;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 255, 136, 0.2);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .bottom-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 8px;
+            border: 2px solid #ff00ff;
+            pointer-events: auto;
+            max-width: 600px;
+            width: 90%;
+        }
+        
+        .units-row {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+        }
+        
+        .unit-card {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            min-width: 80px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .unit-card:hover {
+            background: rgba(0, 255, 136, 0.2);
+            border-color: #00ffff;
+        }
+        
+        .unit-name {
+            font-size: 12px;
+            color: #00ff88;
+            font-weight: bold;
+        }
+        
+        .unit-cost {
+            font-size: 10px;
+            color: #888;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="game-container">
+            <div class="loading-screen" id="loadingScreen">
+                <div class="loading-text">MetroClash</div>
+                <div class="spinner"></div>
+            </div>
+            
+            <div class="ui-overlay">
+                <div class="hud">
+                    <div class="hud-title">⚡ BASE STATUS</div>
+                    <div class="resource">
+                        <span class="resource-label">Gold:</span>
+                        <span class="resource-value" id="goldDisplay">5000</span>
+                    </div>
+                    <div class="resource">
+                        <span class="resource-label">Elixir:</span>
+                        <span class="resource-value" id="elixirDisplay">3000</span>
+                    </div>
+                    <div class="resource">
+                        <span class="resource-label">Dark Elixir:</span>
+                        <span class="resource-value" id="darkElixirDisplay">500</span>
+                    </div>
+                    <div class="resource">
+                        <span class="resource-label">Crystals:</span>
+                        <span class="resource-value" id="crystalsDisplay">100</span>
+                    </div>
+                    <div class="resource">
+                        <span class="resource-label">Level:</span>
+                        <span class="resource-value" id="levelDisplay">1</span>
+                    </div>
+                    <button class="button" onclick="alert('Shop coming soon!')">Shop</button>
+                </div>
+                
+                <div class="right-panel">
+                    <div class="hud-title">⚔️ ACTIONS</div>
+                    <button class="button" onclick="attackEnemy()">Attack Base</button>
+                    <button class="button" onclick="collectResources()">Collect</button>
+                    <button class="button" onclick="upgradeBase()">Upgrade</button>
+                </div>
+                
+                <div class="bottom-panel">
+                    <div class="hud-title">🎖️ TROOPS</div>
+                    <div class="units-row">
+                        <div class="unit-card" onclick="selectUnit('soldier')">
+                            <div class="unit-name">Soldier</div>
+                            <div class="unit-cost">50 Gold</div>
+                        </div>
+                        <div class="unit-card" onclick="selectUnit('tank')">
+                            <div class="unit-name">Tank</div>
+                            <div class="unit-cost">200 Gold</div>
+                        </div>
+                        <div class="unit-card" onclick="selectUnit('helicopter')">
+                            <div class="unit-name">Heli</div>
+                            <div class="unit-cost">300 Elixir</div>
+                        </div>
+                        <div class="unit-card" onclick="selectUnit('robot')">
+                            <div class="unit-name">Robot</div>
+                            <div class="unit-cost">100 D.Elixir</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
